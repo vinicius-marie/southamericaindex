@@ -7,7 +7,7 @@
   <!-- Modern typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root{
       --bg:#0e1116;
@@ -46,15 +46,18 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+    .container{max-width:1200px;margin:0 auto;padding:0 16px}
     header{
       padding:18px 16px 8px;
       text-align:center;
     }
+    .masthead{color:#9fb4d3;font-size:12px;letter-spacing:.22em;text-transform:uppercase;margin-bottom:6px}
     header h1{
       margin:0;
       font-weight:700;
       letter-spacing:.2px;
-      font-size:22px;
+      font-family:"Playfair Display", Georgia, serif;
+      font-size:28px;
       color:#f0f6ff;
     }
     header p{
@@ -281,7 +284,9 @@
   <meta name="description" content="Interactive South America Data Hub (1960–2025): religion, commodities, GDP, GDP per capita, and a synthetic US Affinity Index." />
 </head>
 <body>
+  <div class="container">
   <header>
+    <div class="masthead">South American Index</div>
     <h1>South America Data Hub 1960–2025</h1>
     <p>Explore religion, commodities, GDP, GDP per capita, and a synthetic US Affinity Index</p>
   </header>
@@ -413,6 +418,7 @@
   <div class="footer-note">
     <span class="sr-only">Notes:</span>
     Data is illustrative and synthetic. Values are rough, plausible indicators for interactive exploration only.
+  </div>
   </div>
 
   <script>
