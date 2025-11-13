@@ -94,6 +94,7 @@
       justify-content:center;
       padding:12px 16px 4px;
     }
+    .control .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .control{
       background:rgba(18,24,33,0.6);
       backdrop-filter: blur(10px) saturate(140%);
@@ -270,6 +271,7 @@
     }
     .country:hover{stroke:#55c2ff;transform:translateY(-1px);filter:drop-shadow(0 4px 10px rgba(63,183,255,0.2))}
     .country.selected{stroke:#f7b500;stroke-width:2}
+    .country.compare{stroke:#ff7f50;stroke-width:2}
     [data-theme="light"] .country{ fill:#e9eff7; stroke:#b8c6da; filter:none }
     [data-theme="light"] .country:hover{ stroke:#0b6bcb; filter:none }
     .tooltip{
@@ -367,6 +369,16 @@
     [data-theme="light"] .theme-toggle{ border-color:#d3deec; color:#2a3a52 }
     [data-theme="light"] .theme-toggle:hover{ color:#0b3e78 }
     .sr-only{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
+
+    /* New controls styling */
+    .play-btn, .export-btn{
+      border:1px solid rgba(255,255,255,0.2);
+      background:transparent;color:#cfe5ff;border-radius:999px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:600
+    }
+    .play-btn:hover,.export-btn:hover{color:#fff}
+    .speed-select, .country-select{background:#0f151f;color:#e7eef8;border:1px solid #223248;border-radius:8px;padding:6px 8px;font-size:12px}
+    [data-theme="light"] .play-btn,[data-theme="light"] .export-btn{border-color:#d3deec;color:#2a3a52}
+    [data-theme="light"] .speed-select,[data-theme="light"] .country-select{background:#ffffff;color:#1a2433;border-color:#d6e1ef}
   </style>
   <meta name="description" content="Interactive South America Data Hub (1960–2025): religion, commodities, GDP, GDP per capita, and a synthetic US Affinity Index." />
 </head>
@@ -381,7 +393,8 @@
   <section class="controls" aria-label="Controls">
     <div class="control">
       <h3>Year</h3>
-      <div class="year-wrap">
+      <div class="row year-wrap">
+        <button id="playBtn" class="play-btn" title="Play/Pause">▶</button>
         <input id="yearSlider" type="range" min="1960" max="2025" step="1" value="2020" aria-label="Year slider" list="yearTicks">
         <datalist id="yearTicks">
           <option value="1960"></option>
@@ -394,6 +407,12 @@
           <option value="2025"></option>
         </datalist>
         <strong id="yearLabel">2020</strong>
+        <label for="speedSelect" class="sr-only">Playback speed</label>
+        <select id="speedSelect" class="speed-select" aria-label="Playback speed">
+          <option value="800">1x</option>
+          <option value="400">2x</option>
+          <option value="200">4x</option>
+        </select>
       </div>
     </div>
     <div class="control">
@@ -409,6 +428,26 @@
     <div class="control">
       <h3>Theme</h3>
       <button id="themeToggle" class="theme-toggle" aria-pressed="false" title="Toggle light/dark">Light</button>
+    </div>
+    <div class="control">
+      <h3>Country</h3>
+      <div class="row">
+        <label class="sr-only" for="countrySearch">Search country</label>
+        <input id="countrySearch" class="country-select" list="countryList" placeholder="Select or type..." />
+        <datalist id="countryList"></datalist>
+        <label class="sr-only" for="compareSelect">Compare with</label>
+        <select id="compareSelect" class="country-select" aria-label="Compare with">
+          <option value="">No compare</option>
+        </select>
+      </div>
+    </div>
+    <div class="control">
+      <h3>Export</h3>
+      <div class="row">
+        <button id="exportYearBtn" class="export-btn" title="Export current year CSV">Year CSV</button>
+        <button id="exportSeriesBtn" class="export-btn" title="Export series CSV">Series CSV</button>
+        <button id="shareLinkBtn" class="export-btn" title="Copy shareable link">Copy Link</button>
+      </div>
     </div>
   </section>
 
@@ -742,7 +781,10 @@
     const state = {
       year: 2020,
       topic: 'religion', // 'religion' | 'commodity' | 'gdp' | 'gdpPerCapita' | 'usAffinityIndex'
-      selected: 'BRA'
+      selected: 'BRA',
+      compare: '',
+      timer: null,
+      speedMs: 800
     };
 
     function formatUSD(n){
@@ -820,6 +862,16 @@
       setSliderVisual(yearSlider, state.year);
       yearSlider.addEventListener('input', (e)=> updateYear(+e.target.value));
 
+      // Play controls
+      const playBtn = document.getElementById('playBtn');
+      playBtn.addEventListener('click', togglePlay);
+      const speedSelect = document.getElementById('speedSelect');
+      speedSelect.value = String(state.speedMs);
+      speedSelect.addEventListener('change', ()=>{
+        state.speedMs = +speedSelect.value;
+        if(state.timer) startTimer();
+      });
+
       // Topic buttons
       document.querySelectorAll('.topic-btn').forEach(btn=>{
         btn.addEventListener('click', ()=>{
@@ -851,8 +903,39 @@
         node.addEventListener('click', (e)=>{
           const code = e.target.dataset.code;
           if(!code) return;
-          selectCountry(code);
+          if(e.shiftKey){
+            setCompare(code);
+          }else{
+            selectCountry(code);
+          }
         });
+      });
+
+      // Country search + compare dropdown
+      populateCountryLists();
+      document.getElementById('countrySearch').addEventListener('change', (e)=>{
+        const code = findCountryCode(e.target.value.trim());
+        if(code){ selectCountry(code); e.target.value = COUNTRY_NAMES[code]; }
+      });
+      document.getElementById('compareSelect').addEventListener('change', (e)=>{
+        const code = e.target.value;
+        setCompare(code);
+      });
+
+      // Export buttons
+      document.getElementById('exportYearBtn').addEventListener('click', ()=> downloadCSV(generateYearCSV(state.year), `snapshot-${state.year}.csv`));
+      document.getElementById('exportSeriesBtn').addEventListener('click', ()=>{
+        const codes = [state.selected].concat(state.compare ? [state.compare] : []);
+        downloadCSV(generateSeriesCSV(codes), `series-${state.selected}${state.compare?'-'+state.compare:''}.csv`);
+      });
+      document.getElementById('shareLinkBtn').addEventListener('click', copyShareLink);
+
+      // Keyboard navigation
+      window.addEventListener('keydown', (e)=>{
+        if(e.target && ['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+        if(e.key === 'ArrowLeft'){ updateYear(Math.max(1960, state.year - 1)); }
+        if(e.key === 'ArrowRight'){ updateYear(Math.min(2025, state.year + 1)); }
+        if(e.key.toLowerCase() === ' '){ e.preventDefault(); togglePlay(); }
       });
 
       // Initial render
@@ -860,6 +943,8 @@
       renderMap();
       selectCountry(state.selected);
       updateMapColors(state.topic, state.year);
+      // Load state from URL if present
+      loadFromHash();
     }
 
     function renderMap(){
@@ -939,11 +1024,9 @@
 
     function highlightSelected(){
       document.querySelectorAll('#sa-map .country').forEach(el=>{
-        if(el.dataset.code === state.selected){
-          el.classList.add('selected');
-        }else{
-          el.classList.remove('selected');
-        }
+        const code = el.dataset.code;
+        el.classList.toggle('selected', code === state.selected);
+        el.classList.toggle('compare', state.compare && code === state.compare);
       });
     }
 
@@ -954,6 +1037,7 @@
       document.getElementById('currentYearLabel').textContent = `Year: ${year}`;
       updateMapColors(state.topic, state.year);
       renderCountryPanel(state.selected, state.year);
+      updateHash();
     }
 
     function setSliderVisual(slider, year){
@@ -1018,7 +1102,8 @@
       document.getElementById('kvUS').textContent = `${d.usAffinityIndex}`;
 
       const series = buildCountrySeries(code);
-      renderLineCharts(series, year);
+      const compare = state.compare ? buildCountrySeries(state.compare) : null;
+      renderLineCharts(series, year, compare);
     }
 
     function buildCountrySeries(code){
@@ -1029,19 +1114,20 @@
       return {years, gdp, gdppc, us};
     }
 
-    function renderLineCharts(series, highlightYear){
+    function renderLineCharts(series, highlightYear, compare){
       const {years, gdp, gdppc, us} = series;
-      renderLineChart('chart-gdp', years, gdp, highlightYear, 'gdp');
-      renderLineChart('chart-gdppc', years, gdppc, highlightYear, 'gdppc');
-      renderLineChart('chart-us', years, us, highlightYear, 'us');
+      renderLineChart('chart-gdp', years, gdp, highlightYear, 'gdp', compare ? compare.gdp : null);
+      renderLineChart('chart-gdppc', years, gdppc, highlightYear, 'gdppc', compare ? compare.gdppc : null);
+      renderLineChart('chart-us', years, us, highlightYear, 'us', compare ? compare.us : null);
     }
 
-    function renderLineChart(svgId, years, values, highlightYear, kind){
+    function renderLineChart(svgId, years, values, highlightYear, kind, compareValues){
       const svg = document.getElementById(svgId);
       svg.innerHTML = '';
 
       const W = 320, H = 100, P = 8;
-      const min = Math.min(...values), max = Math.max(...values);
+      const allVals = compareValues ? values.concat(compareValues) : values;
+      const min = Math.min(...allVals), max = Math.max(...allVals);
       const n = values.length;
 
       function x(i){ return P + (W-2*P)*(i/(n-1)); }
@@ -1099,6 +1185,18 @@
       svg.appendChild(area);
       svg.appendChild(poly);
 
+      // Optional compare polyline
+      if(compareValues){
+        const poly2 = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+        const pts2 = compareValues.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+        poly2.setAttribute('points', pts2);
+        poly2.setAttribute('stroke', '#ff7f50');
+        poly2.setAttribute('fill','none');
+        poly2.setAttribute('stroke-width','2.2');
+        poly2.setAttribute('stroke-linecap','round');
+        svg.appendChild(poly2);
+      }
+
       // Highlight vertical line + dot at selected year
       const idx = years.indexOf(highlightYear);
       if(idx >= 0){
@@ -1135,11 +1233,123 @@
       }else if(topic === 'usAffinityIndex'){
         valueLabel = `US Affinity: <strong>${d.usAffinityIndex}</strong>`;
       }
+      const compareExtra = (state.compare && DATA[state.compare] && DATA[state.compare][year]) ? (()=>{
+        const cd = DATA[state.compare][year];
+        if(topic === 'religion') return `<div class="muted">vs ${COUNTRY_NAMES[state.compare]}: ${cd.dominantReligion}</div>`;
+        if(topic === 'commodity'){ const cat = COMMODITY_CATEGORY[cd.mainCommodity] || 'Services/Industry'; return `<div class="muted">vs ${COUNTRY_NAMES[state.compare]}: ${cd.mainCommodity} (${cat})</div>`; }
+        if(topic === 'gdp') return `<div class="muted">vs ${COUNTRY_NAMES[state.compare]}: ${formatUSD(cd.gdp)}</div>`;
+        if(topic === 'gdpPerCapita') return `<div class="muted">vs ${COUNTRY_NAMES[state.compare]}: ${formatUSD(cd.gdpPerCapita)}</div>`;
+        if(topic === 'usAffinityIndex') return `<div class="muted">vs ${COUNTRY_NAMES[state.compare]}: ${cd.usAffinityIndex}</div>`;
+        return '';
+      })() : '';
+
       t.innerHTML = `<h4>${country}</h4>
         <div class="muted">Year: ${year}</div>
-        <div style="margin-top:4px">${valueLabel}</div>`;
+        <div style="margin-top:4px">${valueLabel}</div>${compareExtra}`;
       t.dataset.code = code;
       t.classList.add('show');
+    }
+
+    // Playback
+    function togglePlay(){
+      const btn = document.getElementById('playBtn');
+      if(state.timer){ stopTimer(); btn.textContent = '▶'; return; }
+      startTimer(); btn.textContent = '⏸';
+    }
+    function startTimer(){
+      stopTimer();
+      state.timer = setInterval(()=>{
+        const next = state.year + 1 > 2025 ? 1960 : state.year + 1;
+        updateYear(next);
+      }, state.speedMs);
+    }
+    function stopTimer(){ if(state.timer){ clearInterval(state.timer); state.timer=null; } }
+
+    // Country search helpers
+    function populateCountryLists(){
+      const dl = document.getElementById('countryList');
+      const cmp = document.getElementById('compareSelect');
+      dl.innerHTML='';
+      cmp.innerHTML='<option value="">No compare</option>';
+      Object.keys(COUNTRY_NAMES).forEach(code=>{
+        const opt = document.createElement('option');
+        opt.value = COUNTRY_NAMES[code];
+        dl.appendChild(opt);
+        const opt2 = document.createElement('option');
+        opt2.value = code; opt2.textContent = COUNTRY_NAMES[code];
+        cmp.appendChild(opt2);
+      });
+    }
+    function findCountryCode(input){
+      if(!input) return '';
+      const up = input.trim().toUpperCase();
+      if(COUNTRY_NAMES[up]) return up;
+      for(const [code,name] of Object.entries(COUNTRY_NAMES)){
+        if(name.toUpperCase() === up) return code;
+      }
+      return '';
+    }
+    function setCompare(code){
+      if(code === state.selected) return; // ignore same
+      state.compare = code || '';
+      highlightSelected();
+      renderCountryPanel(state.selected, state.year);
+      updateHash();
+      const cmpSel = document.getElementById('compareSelect');
+      if(cmpSel && cmpSel.value !== state.compare){ cmpSel.value = state.compare; }
+    }
+
+    // CSV export
+    function generateYearCSV(year){
+      const rows = [['country','name','year','religion','commodity','gdp','gdp_per_capita','us_affinity_index']];
+      for(const code of Object.keys(COUNTRY_NAMES)){
+        const d = DATA[code][year];
+        rows.push([code, COUNTRY_NAMES[code], year, d.dominantReligion, d.mainCommodity, d.gdp, d.gdpPerCapita, d.usAffinityIndex]);
+      }
+      return rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    }
+    function generateSeriesCSV(codes){
+      const rows = [['country','name','year','religion','commodity','gdp','gdp_per_capita','us_affinity_index']];
+      codes.forEach(code=>{
+        YEARS.forEach(year=>{
+          const d = DATA[code][year];
+          rows.push([code, COUNTRY_NAMES[code], year, d.dominantReligion, d.mainCommodity, d.gdp, d.gdpPerCapita, d.usAffinityIndex]);
+        });
+      });
+      return rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    }
+    function downloadCSV(text, filename){
+      const blob = new Blob([text], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.style.display='none';
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    }
+
+    // Shareable link (URL hash)
+    function updateHash(){
+      const p = new URLSearchParams();
+      p.set('y', String(state.year));
+      p.set('t', state.topic);
+      p.set('c', state.selected);
+      if(state.compare) p.set('cmp', state.compare);
+      const theme = document.body.getAttribute('data-theme') || 'light';
+      p.set('th', theme);
+      location.hash = '#' + p.toString();
+    }
+    function loadFromHash(){
+      if(!location.hash) return;
+      const s = new URLSearchParams(location.hash.slice(1));
+      const y = +s.get('y'); if(y) updateYear(Math.min(2025, Math.max(1960, y)));
+      const t = s.get('t'); if(t && ['religion','commodity','gdp','gdpPerCapita','usAffinityIndex'].includes(t)){
+        state.topic = t;
+        document.querySelectorAll('.topic-btn').forEach(b=>b.classList.toggle('active', b.dataset.topic===t));
+        renderLegend(state.topic); updateMapColors(state.topic, state.year);
+      }
+      const c = s.get('c'); if(c && COUNTRY_NAMES[c]) selectCountry(c);
+      const cmp = s.get('cmp'); if(cmp && COUNTRY_NAMES[cmp]) setCompare(cmp);
+      const th = s.get('th'); if(th) setTheme(th);
     }
     function hideTooltip(){
       const t = document.getElementById('tooltip');
