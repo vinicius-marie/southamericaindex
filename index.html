@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>South America Data Hub 1960–2025</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0e1116;
+      --panel:#151a22;
+      --muted:#8ea0b7;
+      --text:#e7eef8;
+      --line:#243042;
+      --accent:#3fb7ff;
+      --accent-2:#8bd5ff;
+      --focus:#f7b500;
+
+      /* Categorical palettes */
+      --relig-catholic:#2E7D32;
+      --relig-protestant:#EF6C00;
+      --relig-mixed:#6A1B9A;
+
+      --cat-agri:#43A047;
+      --cat-mining:#F39C12;
+      --cat-oil:#C0392B;
+      --cat-services:#5C6BC0;
+
+      /* Numeric sequential (light → dark) */
+      --seq-light:#e8f1fb;
+      --seq-dark:#0D47A1;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,#0a0d12, #0d1218 35%, var(--bg));
+    }
+    header{
+      padding:18px 16px 8px;
+      text-align:center;
+    }
+    header h1{
+      margin:0;
+      font-weight:700;
+      letter-spacing:.2px;
+      font-size:22px;
+      color:#f0f6ff;
+    }
+    header p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px 18px;
+      align-items:center;
+      justify-content:center;
+      padding:12px 16px 4px;
+    }
+    .control{
+      background:var(--panel);
+      border:1px solid #1f2733;
+      border-radius:10px;
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset, 0 6px 16px rgba(0,0,0,0.35);
+    }
+    .control h3{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:600;
+      letter-spacing:.2px;
+    }
+    .year-wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    #yearSlider{
+      width:250px;
+    }
+    input[type="range"]{
+      -webkit-appearance:none;
+      appearance:none;
+      height:6px;
+      background:#1c2330;
+      border-radius:999px;
+      outline:none;
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:18px;height:18px;border-radius:50%;
+      background:linear-gradient(180deg,#fff,#d9e7ff);
+      border:2px solid var(--accent);
+      box-shadow:0 2px 10px rgba(0,0,0,0.45), 0 0 0 3px rgba(63,183,255,0.25);
+      cursor:pointer;
+    }
+    .topic-buttons{
+      display:flex;gap:8px;flex-wrap:wrap;
+    }
+    .topic-btn{
+      border:1px solid #1f2733;
+      background:#111722;
+      color:#cfe5ff;
+      padding:8px 10px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:12px;
+      letter-spacing:.2px;
+      transition:all .15s ease;
+    }
+    .topic-btn:hover{border-color:#2a3546;color:#fff}
+    .topic-btn.active{
+      background:linear-gradient(180deg,#13263c,#0f1b2b);
+      color:#fff;
+      border-color:#31557a;
+      box-shadow:0 0 0 1px rgba(63,183,255,0.25) inset, 0 6px 20px rgba(24,38,57,0.6);
+    }
+    .main{
+      display:grid;gap:16px;
+      grid-template-columns: 1.25fr 1fr;
+      padding:12px 16px 24px;
+    }
+    @media (max-width: 980px){
+      .main{grid-template-columns:1fr}
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid #1f2733;
+      border-radius:12px;
+      padding:12px;
+      min-height:200px;
+      box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset, 0 12px 28px rgba(0,0,0,0.35);
+    }
+    .map-wrap{
+      display:flex;flex-direction:column;gap:10px;height:100%;
+    }
+    .map-legend{
+      display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+      background:#0f151f;border:1px solid #1f2733;border-radius:10px;padding:10px 12px;
+    }
+    .legend-items{display:flex;gap:10px;flex-wrap:wrap}
+    .legend-item{display:flex;align-items:center;gap:8px;color:#cfe5ff;font-size:12px}
+    .legend-swatch{width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,0.2)}
+    .legend-gradient{
+      width:180px;height:14px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);
+      background: linear-gradient(90deg, var(--seq-light), var(--seq-dark));
+    }
+    .legend-scale{display:flex;align-items:center;gap:6px;color:#cfe5ff;font-size:12px}
+    .legend-scale span{color:#9fb4d3}
+    .svg-wrap{
+      flex:1;min-height:420px;background:#0f151f;border:1px solid #1f2733;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+    }
+    svg#sa-map{width:100%;height:100%;max-height:640px}
+    .country{
+      fill:#162030;
+      stroke:#1f2b3c;
+      stroke-width:1.2;
+      cursor:pointer;
+      transition:fill .15s ease, stroke .2s ease, transform .06s ease;
+    }
+    .country:hover{stroke:#3fb7ff;filter:drop-shadow(0 0 4px rgba(63,183,255,0.25))}
+    .country.selected{stroke:#f7b500;stroke-width:2}
+    .tooltip{
+      position:absolute;pointer-events:none;z-index:50;
+      background:#0f151f;border:1px solid #2c3a50;border-radius:8px;padding:8px 10px;
+      color:#e7eef8;box-shadow:0 10px 24px rgba(0,0,0,0.45);font-size:12px;min-width:160px;
+      transform:translate(-50%,-120%);opacity:0;transition:opacity .12s ease;
+    }
+    .tooltip.show{opacity:1}
+    .tooltip h4{margin:0 0 4px;font-size:13px;color:#fff}
+    .tooltip .muted{color:#9fb4d3}
+    .country-panel h2{
+      margin:0 0 6px;font-size:18px;letter-spacing:.3px;color:#fff;display:flex;gap:8px;align-items:center;flex-wrap:wrap
+    }
+    .flag-strip{
+      height:8px;border-radius:5px;overflow:hidden;border:1px solid #1f2733;margin:0 0 10px;background:#333
+    }
+    .kv{
+      width:100%;
+      border-collapse:collapse;
+      margin:8px 0 6px;
+    }
+    .kv th,.kv td{
+      border-bottom:1px solid #1d2735;
+      padding:8px 6px;
+      text-align:left;
+      font-size:13px;
+    }
+    .kv th{color:#9fb4d3;font-weight:600;width:42%}
+    .kv td{color:#e7eef8}
+    .charts{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:8px;margin-top:10px;
+    }
+    .chart{
+      background:#0f151f;border:1px solid #1f2733;border-radius:10px;padding:6px 8px;
+    }
+    .chart h4{
+      margin:0 0 6px;
+      font-size:12px;color:#cfe5ff;letter-spacing:.2px
+    }
+    .chart svg{width:100%;height:90px}
+    .axis{
+      stroke:#203046;stroke-width:1
+    }
+    .series{
+      fill:none;stroke:url(#gradLine);stroke-width:2
+    }
+    .series-alt{stroke:#5cc8fa}
+    .dot{
+      fill:#fff;stroke:#3fb7ff;stroke-width:1.5
+    }
+    .now-line{
+      stroke:#f7b500;stroke-width:1.2;stroke-dasharray:4 3
+    }
+    .footer-note{
+      padding:8px 16px 20px;
+      color:#7f93b1;
+      font-size:11px;
+      text-align:center;
+    }
+    .sr-only{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
+  </style>
+  <meta name="description" content="Interactive South America Data Hub (1960–2025): religion, commodities, GDP, GDP per capita, and a synthetic US Affinity Index." />
+</head>
+<body>
+  <header>
+    <h1>South America Data Hub 1960–2025</h1>
+    <p>Explore religion, commodities, GDP, GDP per capita, and a synthetic US Affinity Index</p>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="control">
+      <h3>Year</h3>
+      <div class="year-wrap">
+        <input id="yearSlider" type="range" min="1960" max="2025" step="5" value="2020" aria-label="Year slider">
+        <strong id="yearLabel">2020</strong>
+      </div>
+    </div>
+    <div class="control">
+      <h3>Topic</h3>
+      <div class="topic-buttons" role="group" aria-label="Topic selector">
+        <button class="topic-btn active" data-topic="religion">Religion</button>
+        <button class="topic-btn" data-topic="commodity">Main Commodity</button>
+        <button class="topic-btn" data-topic="gdp">GDP</button>
+        <button class="topic-btn" data-topic="gdpPerCapita">GDP per Capita</button>
+        <button class="topic-btn" data-topic="usAffinityIndex">US Affinity Index</button>
+      </div>
+    </div>
+  </section>
+
+  <main class="main">
+    <section class="panel map-wrap" aria-label="Map and Legend">
+      <div class="map-legend" id="legend" aria-live="polite">
+        <!-- Legend dynamically rendered here -->
+      </div>
+      <div class="svg-wrap">
+        <!-- Stylized, diagrammatic SVG map of South America.
+             This is not cartographically precise; it's a clickable schematic
+             arrangement with approximate relative positions.
+             Each shape has a data-code and data-name for interactivity. -->
+        <svg id="sa-map" viewBox="0 0 620 780" role="img" aria-label="Stylized map of South America">
+          <defs>
+            <filter id="shadow">
+              <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="rgba(0,0,0,0.6)"/>
+            </filter>
+          </defs>
+
+          <!-- North (top) -->
+          <rect class="country" id="COL" data-code="COL" data-name="Colombia" x="90" y="120" width="150" height="90" rx="8" ry="8"/>
+          <rect class="country" id="VEN" data-code="VEN" data-name="Venezuela" x="240" y="110" width="160" height="80" rx="8" ry="8"/>
+          <rect class="country" id="GUY" data-code="GUY" data-name="Guyana" x="410" y="130" width="70" height="60" rx="8" ry="8"/>
+          <rect class="country" id="SUR" data-code="SUR" data-name="Suriname" x="485" y="130" width="65" height="60" rx="8" ry="8"/>
+
+          <!-- Andean west -->
+          <rect class="country" id="ECU" data-code="ECU" data-name="Ecuador" x="70" y="220" width="70" height="80" rx="8" ry="8"/>
+          <!-- Peru tall -->
+          <rect class="country" id="PER" data-code="PER" data-name="Peru" x="90" y="310" width="120" height="180" rx="10" ry="10"/>
+          <!-- Chile vertical strip -->
+          <rect class="country" id="CHL" data-code="CHL" data-name="Chile" x="60" y="340" width="22" height="300" rx="10" ry="10"/>
+
+          <!-- Brazil large center (two merged rectangles for a larger area) -->
+          <rect class="country" id="BRA_a" data-part="true" data-code="BRA" data-name="Brazil" x="220" y="200" width="250" height="220" rx="12" ry="12"/>
+          <rect class="country" id="BRA_b" data-part="true" data-code="BRA" data-name="Brazil" x="260" y="410" width="200" height="160" rx="12" ry="12"/>
+
+          <!-- Bolivia and Paraguay -->
+          <rect class="country" id="BOL" data-code="BOL" data-name="Bolivia" x="210" y="360" width="110" height="90" rx="10" ry="10"/>
+          <rect class="country" id="PRY" data-code="PRY" data-name="Paraguay" x="280" y="450" width="90" height="80" rx="10" ry="10"/>
+
+          <!-- Uruguay and Argentina -->
+          <rect class="country" id="URY" data-code="URY" data-name="Uruguay" x="340" y="560" width="80" height="60" rx="10" ry="10"/>
+          <!-- Argentina stylized L-shaped polygon -->
+          <path class="country" id="ARG" data-code="ARG" data-name="Argentina"
+                d="M240 520
+                   L330 520
+                   L330 560
+                   L310 560
+                   L310 620
+                   L280 690
+                   L260 740
+                   L220 740
+                   L230 700
+                   L250 640
+                   L240 620
+                   Z" />
+
+          <!-- Overlay tooltip -->
+          <foreignObject x="0" y="0" width="0" height="0">
+            <div id="tooltip" class="tooltip" xmlns="http://www.w3.org/1999/xhtml" role="status" aria-live="polite"></div>
+          </foreignObject>
+        </svg>
+      </div>
+    </section>
+
+    <aside class="panel country-panel" aria-live="polite" aria-atomic="true">
+      <div class="flag-strip" id="flagStrip"></div>
+      <h2 id="countryTitle">—</h2>
+      <div class="muted" id="currentYearLabel" style="margin-bottom:6px">Year: —</div>
+      <table class="kv">
+        <tbody>
+          <tr><th>Dominant religion</th><td id="kvReligion">—</td></tr>
+          <tr><th>Main commodity</th><td id="kvCommodity">—</td></tr>
+          <tr><th>GDP (total)</th><td id="kvGDP">—</td></tr>
+          <tr><th>GDP per Capita</th><td id="kvGDPpc">—</td></tr>
+          <tr><th>US Affinity Index</th><td id="kvUS">—</td></tr>
+        </tbody>
+      </table>
+
+      <div class="charts">
+        <div class="chart">
+          <h4>GDP over time</h4>
+          <svg id="chart-gdp" viewBox="0 0 320 100" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="chart">
+          <h4>GDP per capita over time</h4>
+          <svg id="chart-gdppc" viewBox="0 0 320 100" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="chart">
+          <h4>US Affinity Index over time</h4>
+          <svg id="chart-us" viewBox="0 0 320 100" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer-note">
+    <span class="sr-only">Notes:</span>
+    Data is illustrative and synthetic. Values are rough, plausible indicators for interactive exploration only.
+  </div>
+
+  <script>
+    // ------------------------------------------------------------
+    // Data model and generation
+    // ------------------------------------------------------------
+    // Countries included:
+    // Argentina (ARG), Bolivia (BOL), Brazil (BRA), Chile (CHL),
+    // Colombia (COL), Ecuador (ECU), Guyana (GUY), Paraguay (PRY),
+    // Peru (PER), Suriname (SUR), Uruguay (URY), Venezuela (VEN).
+    //
+    // For each country and every 5-year step from 1960 to 2025,
+    // we generate:
+    // {
+    //   country: string,          // country code (ISO-like)
+    //   year: number,
+    //   dominantReligion: string, // "Catholic", "Protestant/Evangelical", "Mixed/Other"
+    //   mainCommodity: string,    // e.g., "Soybeans", "Oil", "Copper", etc.
+    //   gdp: number,              // total GDP (approximate constant USD)
+    //   gdpPerCapita: number,     // GDP per capita (approximate USD)
+    //   usAffinityIndex: number   // 0..100 synthetic metric
+    // }
+    //
+    // usAffinityIndex is a synthetic, illustrative metric (0–100)
+    // representing approximate geopolitical/economic closeness to
+    // the USA by decade. Values are approximate and for visualization only.
+    //
+    // We define per-country per-decade anchor values (1960..2020 and
+    // an extra 2030 anchor), and linearly interpolate to fill intermediate
+    // years (including 2025 between 2020 and 2030).
+    //
+    // Real datasets can be plugged in by replacing the generation logic
+    // with fetches/loads from external sources (e.g., CSV/JSON) and mapping
+    // fields into the schema used here.
+    // ------------------------------------------------------------
+
+    const YEARS = Array.from({length: ((2025 - 1960) / 5) + 1}, (_,i)=>1960 + i*5);
+
+    const COUNTRY_NAMES = {
+      ARG:'Argentina', BOL:'Bolivia', BRA:'Brazil', CHL:'Chile', COL:'Colombia',
+      ECU:'Ecuador', GUY:'Guyana', PRY:'Paraguay', PER:'Peru', SUR:'Suriname',
+      URY:'Uruguay', VEN:'Venezuela'
+    };
+
+    const FLAG_STRIPES = {
+      ARG:['#74ACDF','#FFFFFF','#74ACDF'],
+      BOL:['#D52B1E','#FCDD09','#007934'],
+      BRA:['#009B3A','#FFDF00','#002776'],
+      CHL:['#D52B1E','#FFFFFF','#0039A6'],
+      COL:['#FCD116','#003893','#CE1126'],
+      ECU:['#FCD116','#003893','#CE1126'],
+      GUY:['#009E49','#FCD116','#CE1126','#000000','#FFFFFF'],
+      PRY:['#D52B1E','#FFFFFF','#0038A8'],
+      PER:['#D91023','#FFFFFF','#D91023'],
+      SUR:['#377E3F','#FFFFFF','#B40A2D','#FFFFFF','#377E3F'],
+      URY:['#FFFFFF','#0D47A1','#FFFFFF','#0D47A1','#FFFFFF','#0D47A1','#FFFFFF','#0D47A1'],
+      VEN:['#FCD116','#003893','#CE1126']
+    };
+
+    const RELIGION_COLORS = {
+      'Catholic':'var(--relig-catholic)',
+      'Protestant/Evangelical':'var(--relig-protestant)',
+      'Mixed/Other':'var(--relig-mixed)'
+    };
+
+    const COMMODITY_CATEGORY = {
+      // Agriculture
+      'Soybeans':'Agriculture','Coffee':'Agriculture','Cattle':'Agriculture','Beef':'Agriculture','Sugar':'Agriculture','Corn':'Agriculture',
+      // Mining
+      'Copper':'Mining','Iron ore':'Mining','Gold':'Mining','Bauxite':'Mining','Lithium':'Mining',
+      // Oil & Gas
+      'Oil':'Oil & Gas','Natural gas':'Oil & Gas',
+      // Services/Industry
+      'Manufacturing':'Services/Industry','Services':'Services/Industry'
+    };
+    const COMMODITY_COLORS = {
+      'Agriculture':'var(--cat-agri)',
+      'Mining':'var(--cat-mining)',
+      'Oil & Gas':'var(--cat-oil)',
+      'Services/Industry':'var(--cat-services)'
+    };
+
+    // Country specs: base values and per-decade anchors for religion/commodity/affinity.
+    const COUNTRY_SPECS = {
+      BRA: {
+        baseGDP: 60, g5:1.35, basePC:700, gpc5:1.22,
+        religionByDecade: {1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Protestant/Evangelical',2020:'Protestant/Evangelical',2030:'Protestant/Evangelical'},
+        commodityByDecade:{1960:'Coffee',1970:'Coffee',1980:'Cattle',1990:'Soybeans',2000:'Soybeans',2010:'Soybeans',2020:'Soybeans',2030:'Services'},
+        usAffinity:{1960:55,1970:50,1980:45,1990:65,2000:70,2010:75,2020:70,2030:70}
+      },
+      ARG: {
+        baseGDP: 20, g5:1.34, basePC:2000, gpc5:1.17,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Catholic',2020:'Catholic',2030:'Mixed/Other'},
+        commodityByDecade:{1960:'Cattle',1970:'Cattle',1980:'Cattle',1990:'Soybeans',2000:'Soybeans',2010:'Soybeans',2020:'Services',2030:'Services'},
+        usAffinity:{1960:40,1970:45,1980:35,1990:60,2000:55,2010:50,2020:45,2030:50}
+      },
+      CHL: {
+        baseGDP: 4, g5:1.45, basePC:1500, gpc5:1.25,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Mixed/Other',2010:'Mixed/Other',2020:'Mixed/Other',2030:'Mixed/Other'},
+        commodityByDecade:{1960:'Copper',1970:'Copper',1980:'Copper',1990:'Copper',2000:'Copper',2010:'Copper',2020:'Services',2030:'Services'},
+        usAffinity:{1960:50,1970:40,1980:60,1990:70,2000:75,2010:70,2020:65,2030:65}
+      },
+      COL: {
+        baseGDP: 7, g5:1.40, basePC:800, gpc5:1.22,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Protestant/Evangelical',2010:'Protestant/Evangelical',2020:'Protestant/Evangelical',2030:'Protestant/Evangelical'},
+        commodityByDecade:{1960:'Coffee',1970:'Coffee',1980:'Coffee',1990:'Oil',2000:'Oil',2010:'Oil',2020:'Oil',2030:'Services'},
+        usAffinity:{1960:60,1970:55,1980:50,1990:65,2000:70,2010:65,2020:60,2030:60}
+      },
+      PER: {
+        baseGDP: 4, g5:1.42, basePC:900, gpc5:1.22,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Mixed/Other',2020:'Mixed/Other',2030:'Mixed/Other'},
+        commodityByDecade:{1960:'Copper',1970:'Copper',1980:'Gold',1990:'Gold',2000:'Copper',2010:'Copper',2020:'Services',2030:'Services'},
+        usAffinity:{1960:55,1970:50,1980:45,1990:60,2000:60,2010:55,2020:55,2030:55}
+      },
+      ECU: {
+        baseGDP: 2, g5:1.38, basePC:700, gpc5:1.22,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Protestant/Evangelical',2020:'Protestant/Evangelical',2030:'Protestant/Evangelical'},
+        commodityByDecade:{1960:'Banana',1970:'Oil',1980:'Oil',1990:'Oil',2000:'Oil',2010:'Oil',2020:'Oil',2030:'Services'},
+        usAffinity:{1960:55,1970:50,1980:45,1990:55,2000:60,2010:60,2020:55,2030:55}
+      },
+      VEN: {
+        baseGDP: 5, g5:1.38, basePC:2000, gpc5:1.10,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Catholic',2020:'Catholic',2030:'Catholic'},
+        commodityByDecade:{1960:'Oil',1970:'Oil',1980:'Oil',1990:'Oil',2000:'Oil',2010:'Oil',2020:'Oil',2030:'Oil'},
+        usAffinity:{1960:65,1970:70,1980:60,1990:55,2000:45,2010:30,2020:20,2030:25}
+      },
+      BOL: {
+        baseGDP: 1, g5:1.38, basePC:600, gpc5:1.20,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Protestant/Evangelical',2020:'Protestant/Evangelical',2030:'Protestant/Evangelical'},
+        commodityByDecade:{1960:'Tin',1970:'Tin',1980:'Natural gas',1990:'Natural gas',2000:'Natural gas',2010:'Natural gas',2020:'Lithium',2030:'Lithium'},
+        usAffinity:{1960:45,1970:40,1980:35,1990:50,2000:45,2010:40,2020:35,2030:40}
+      },
+      PRY: {
+        baseGDP: 1, g5:1.40, basePC:700, gpc5:1.20,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Catholic',2010:'Catholic',2020:'Catholic',2030:'Catholic'},
+        commodityByDecade:{1960:'Cattle',1970:'Cattle',1980:'Cattle',1990:'Soybeans',2000:'Soybeans',2010:'Soybeans',2020:'Soybeans',2030:'Services'},
+        usAffinity:{1960:50,1970:45,1980:40,1990:55,2000:55,2010:50,2020:50,2030:55}
+      },
+      URY: {
+        baseGDP: 2, g5:1.40, basePC:2000, gpc5:1.20,
+        religionByDecade:{1960:'Catholic',1970:'Catholic',1980:'Catholic',1990:'Catholic',2000:'Mixed/Other',2010:'Mixed/Other',2020:'Mixed/Other',2030:'Mixed/Other'},
+        commodityByDecade:{1960:'Beef',1970:'Beef',1980:'Beef',1990:'Beef',2000:'Beef',2010:'Services',2020:'Services',2030:'Services'},
+        usAffinity:{1960:55,1970:55,1980:50,1990:60,2000:60,2010:65,2020:65,2030:65}
+      },
+      GUY: {
+        baseGDP: 0.5, g5:1.35, basePC:800, gpc5:1.22,
+        religionByDecade:{1960:'Mixed/Other',1970:'Mixed/Other',1980:'Mixed/Other',1990:'Mixed/Other',2000:'Mixed/Other',2010:'Mixed/Other',2020:'Mixed/Other',2030:'Mixed/Other'},
+        commodityByDecade:{1960:'Bauxite',1970:'Bauxite',1980:'Bauxite',1990:'Gold',2000:'Gold',2010:'Gold',2020:'Oil',2030:'Oil'},
+        usAffinity:{1960:50,1970:50,1980:45,1990:55,2000:60,2010:65,2020:70,2030:75}
+      },
+      SUR: {
+        baseGDP: 0.3, g5:1.30, basePC:900, gpc5:1.18,
+        religionByDecade:{1960:'Mixed/Other',1970:'Mixed/Other',1980:'Mixed/Other',1990:'Mixed/Other',2000:'Mixed/Other',2010:'Mixed/Other',2020:'Mixed/Other',2030:'Mixed/Other'},
+        commodityByDecade:{1960:'Bauxite',1970:'Bauxite',1980:'Bauxite',1990:'Gold',2000:'Gold',2010:'Gold',2020:'Gold',2030:'Gold'},
+        usAffinity:{1960:45,1970:45,1980:40,1990:50,2000:55,2010:55,2020:55,2030:55}
+      }
+    };
+
+    // Map a few shorthand/legacy commodities to categories defined above
+    function normalizeCommodity(name){
+      const n = name.toLowerCase();
+      if(n.includes('soy')) return 'Soybeans';
+      if(n.includes('coffee')) return 'Coffee';
+      if(n.includes('cattle') || n.includes('beef')) return 'Beef';
+      if(n.includes('tin')) return 'Gold'; // place tin under Mining via 'Gold' for color grouping in this minimal mapping
+      if(n.includes('iron')) return 'Iron ore';
+      if(n.includes('copper')) return 'Copper';
+      if(n.includes('gold')) return 'Gold';
+      if(n.includes('baux')) return 'Bauxite';
+      if(n.includes('lith')) return 'Lithium';
+      if(n.includes('oil')) return 'Oil';
+      if(n.includes('gas')) return 'Natural gas';
+      if(n.includes('manu')) return 'Manufacturing';
+      if(n.includes('service')) return 'Services';
+      if(n.includes('banana')) return 'Services'; // small category proxy
+      return name;
+    }
+
+    // Interpolate between two decade anchors
+    function lerp(a,b,t){ return a + (b-a)*t; }
+
+    // Build the full dataset
+    const DATA = {}; // DATA[countryCode][year] = record
+    (function buildData(){
+      for(const code of Object.keys(COUNTRY_SPECS)){
+        const spec = COUNTRY_SPECS[code];
+        DATA[code] = {};
+        for(let i=0;i<YEARS.length;i++){
+          const year = YEARS[i];
+          const steps = Math.round((year - 1960)/5);
+
+          const gdpBillions = spec.baseGDP * Math.pow(spec.g5, steps);
+          const gdp = Math.round(gdpBillions * 1e9);
+          const gdpPerCapita = Math.round(spec.basePC * Math.pow(spec.gpc5, steps));
+
+          const decade = Math.floor(year/10)*10;
+          const nextDecade = decade + 10;
+
+          // Religion and commodity taken from the decade bucket (piecewise constant)
+          const dominantReligion = spec.religionByDecade[decade] ?? spec.religionByDecade[1960];
+          const commodityRaw = spec.commodityByDecade[decade] ?? spec.commodityByDecade[1960];
+          const mainCommodity = normalizeCommodity(commodityRaw);
+
+          // US Affinity is linearly interpolated by decade anchors.
+          // For 2025, we interpolate between 2020 and 2030 anchors.
+          const a0 = spec.usAffinity[decade] ?? spec.usAffinity[1960];
+          const a1 = spec.usAffinity[nextDecade] ?? a0;
+          const t = (year - decade) / 10;
+          const usAffinityIndex = Math.round(lerp(a0, a1, t));
+
+          DATA[code][year] = {
+            country: code,
+            year,
+            dominantReligion,
+            mainCommodity,
+            gdp,
+            gdpPerCapita,
+            usAffinityIndex
+          };
+        }
+      }
+    })();
+
+    // ------------------------------------------------------------
+    // App state and helpers
+    // ------------------------------------------------------------
+    const state = {
+      year: 2020,
+      topic: 'religion', // 'religion' | 'commodity' | 'gdp' | 'gdpPerCapita' | 'usAffinityIndex'
+      selected: 'BRA'
+    };
+
+    function formatUSD(n){
+      return '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
+    }
+    function formatUSDShort(n){
+      // Helper for compact tooltips if needed (not used in main table)
+      if(n >= 1e12) return '$' + (n/1e12).toFixed(1) + 'T';
+      if(n >= 1e9)  return '$' + (n/1e9).toFixed(1) + 'B';
+      if(n >= 1e6)  return '$' + (n/1e6).toFixed(1) + 'M';
+      return '$' + n.toLocaleString('en-US');
+    }
+
+    // Sequential light→dark blue color scale
+    function seqColorScale(value, min, max){
+      if(!isFinite(value) || !isFinite(min) || !isFinite(max) || max<=min) return 'var(--seq-light)';
+      const t = Math.min(1, Math.max(0, (value - min)/(max - min)));
+      // Interpolate in HCL-ish via simple HSL approximation: from light blue to dark blue
+      const h = 213; // blue
+      const s = 70;
+      const l = 95 - t*55; // 95% -> 40%
+      return `hsl(${h} ${s}% ${l}%)`;
+    }
+
+    // Map topic to color for a given country/year
+    function colorForCountry(code, year, topic, ranges){
+      const d = DATA[code][year];
+      if(!d) return '#222';
+
+      if(topic === 'religion'){
+        return RELIGION_COLORS[d.dominantReligion] || '#666';
+      }
+      if(topic === 'commodity'){
+        const cat = COMMODITY_CATEGORY[d.mainCommodity] || 'Services/Industry';
+        return COMMODITY_COLORS[cat] || '#666';
+      }
+      if(topic === 'gdp'){
+        return seqColorScale(d.gdp, ranges.gdp.min, ranges.gdp.max);
+      }
+      if(topic === 'gdpPerCapita'){
+        return seqColorScale(d.gdpPerCapita, ranges.gdppc.min, ranges.gdppc.max);
+      }
+      if(topic === 'usAffinityIndex'){
+        return seqColorScale(d.usAffinityIndex, 0, 100);
+      }
+      return '#333';
+    }
+
+    function computeRanges(year){
+      let gmin=Infinity, gmax=-Infinity, pcmin=Infinity, pcmax=-Infinity;
+      for(const code of Object.keys(DATA)){
+        const d = DATA[code][year];
+        if(!d) continue;
+        gmin = Math.min(gmin, d.gdp);
+        gmax = Math.max(gmax, d.gdp);
+        pcmin = Math.min(pcmin, d.gdpPerCapita);
+        pcmax = Math.max(pcmax, d.gdpPerCapita);
+      }
+      return { gdp:{min:gmin,max:gmax}, gdppc:{min:pcmin,max:pcmax} };
+    }
+
+    // ------------------------------------------------------------
+    // Rendering
+    // ------------------------------------------------------------
+    function init(){
+      // Year control
+      const yearSlider = document.getElementById('yearSlider');
+      const yearLabel = document.getElementById('yearLabel');
+      yearSlider.value = state.year;
+      yearLabel.textContent = state.year;
+      yearSlider.addEventListener('input', (e)=> updateYear(+e.target.value));
+
+      // Topic buttons
+      document.querySelectorAll('.topic-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          document.querySelectorAll('.topic-btn').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          state.topic = btn.dataset.topic;
+          renderLegend(state.topic);
+          updateMapColors(state.topic, state.year);
+        });
+      });
+
+      // Map interactions
+      const svg = document.getElementById('sa-map');
+      const tooltip = document.getElementById('tooltip');
+      svg.addEventListener('mousemove', (e)=>{
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        tooltip.style.left = `${e.clientX}px`;
+        tooltip.style.top  = `${e.clientY - 20}px`;
+      });
+
+      svg.querySelectorAll('.country').forEach(node=>{
+        node.addEventListener('mouseenter', (e)=>{
+          const code = e.target.dataset.code;
+          if(!code) return;
+          showTooltip(code, state.year, state.topic);
+        });
+        node.addEventListener('mouseleave', hideTooltip);
+        node.addEventListener('click', (e)=>{
+          const code = e.target.dataset.code;
+          if(!code) return;
+          selectCountry(code);
+        });
+      });
+
+      // Initial render
+      renderLegend(state.topic);
+      renderMap();
+      selectCountry(state.selected);
+      updateMapColors(state.topic, state.year);
+    }
+
+    function renderMap(){
+      // Merge Brazil's two rectangles into one logical selected highlight
+      // We attach selection class based on state
+      highlightSelected();
+    }
+
+    function updateMapColors(topic, year){
+      const ranges = computeRanges(year);
+      document.querySelectorAll('#sa-map .country').forEach(el=>{
+        const code = el.dataset.code;
+        // For Brazil's two pieces, we color by code as usual
+        const color = colorForCountry(code, year, topic, ranges);
+        el.style.fill = color;
+      });
+      // Update tooltip if visible
+      const tooltip = document.getElementById('tooltip');
+      if(tooltip.classList.contains('show') && tooltip.dataset.code){
+        showTooltip(tooltip.dataset.code, state.year, state.topic);
+      }
+    }
+
+    function renderLegend(topic){
+      const legend = document.getElementById('legend');
+      legend.innerHTML = '';
+      const title = document.createElement('div');
+      title.className = 'legend-scale';
+      let label = '';
+      if(topic === 'religion') label = 'Legend: Dominant Religion';
+      else if(topic === 'commodity') label = 'Legend: Main Commodity Category';
+      else if(topic === 'gdp') label = 'Legend: GDP (light → dark = low → high)';
+      else if(topic === 'gdpPerCapita') label = 'Legend: GDP per Capita';
+      else if(topic === 'usAffinityIndex') label = 'Legend: US Affinity Index';
+      title.innerHTML = `<span>${label}</span>`;
+      legend.appendChild(title);
+
+      if(topic === 'religion'){
+        const wrap = document.createElement('div'); wrap.className = 'legend-items';
+        for(const [k,v] of Object.entries(RELIGION_COLORS)){
+          const item = document.createElement('div'); item.className='legend-item';
+          item.innerHTML = `<span class="legend-swatch" style="background:${getComputedStyle(document.documentElement).getPropertyValue(v.replace('var(','').replace(')','')).trim() || v};"></span>${k}`;
+          wrap.appendChild(item);
+        }
+        legend.appendChild(wrap);
+      }else if(topic === 'commodity'){
+        const wrap = document.createElement('div'); wrap.className = 'legend-items';
+        for(const [k,v] of Object.entries(COMMODITY_COLORS)){
+          const item = document.createElement('div'); item.className='legend-item';
+          item.innerHTML = `<span class="legend-swatch" style="background:${getComputedStyle(document.documentElement).getPropertyValue(v.replace('var(','').replace(')','')).trim() || v};"></span>${k}`;
+          wrap.appendChild(item);
+        }
+        legend.appendChild(wrap);
+      }else{
+        const grad = document.createElement('div'); grad.className='legend-gradient';
+        const scale = document.createElement('div'); scale.className='legend-scale';
+        const ranges = computeRanges(state.year);
+        let minTxt='min', maxTxt='max';
+        if(topic==='gdp'){ minTxt = formatUSD(ranges.gdp.min); maxTxt = formatUSD(ranges.gdp.max); }
+        if(topic==='gdpPerCapita'){ minTxt = formatUSD(ranges.gdppc.min); maxTxt = formatUSD(ranges.gdppc.max); }
+        if(topic==='usAffinityIndex'){ minTxt = '0'; maxTxt = '100'; }
+        const smin = document.createElement('span'); smin.textContent = minTxt;
+        const smax = document.createElement('span'); smax.textContent = maxTxt;
+        legend.appendChild(grad);
+        const spacer = document.createElement('div'); spacer.style.flex='1';
+        legend.appendChild(spacer);
+        legend.appendChild(smin);
+        legend.appendChild(smax);
+      }
+    }
+
+    function selectCountry(code){
+      state.selected = code;
+      highlightSelected();
+      renderCountryPanel(code, state.year);
+    }
+
+    function highlightSelected(){
+      document.querySelectorAll('#sa-map .country').forEach(el=>{
+        if(el.dataset.code === state.selected){
+          el.classList.add('selected');
+        }else{
+          el.classList.remove('selected');
+        }
+      });
+    }
+
+    function updateYear(year){
+      state.year = year;
+      document.getElementById('yearLabel').textContent = year;
+      document.getElementById('currentYearLabel').textContent = `Year: ${year}`;
+      updateMapColors(state.topic, state.year);
+      renderCountryPanel(state.selected, state.year);
+    }
+
+    function countryStripeGradient(code){
+      const colors = FLAG_STRIPES[code] || ['#333','#666','#999'];
+      if(colors.length === 1) return colors[0];
+      const step = 100/(colors.length);
+      return `linear-gradient(90deg, ${colors.map((c,i)=>`${c} ${i*step}% ${((i+1)*step)}%`).join(', ')})`;
+    }
+
+    function renderCountryPanel(code, year){
+      const d = DATA[code][year];
+      const title = document.getElementById('countryTitle');
+      title.textContent = `${COUNTRY_NAMES[code]} — ${year}`;
+
+      const flag = document.getElementById('flagStrip');
+      flag.style.background = countryStripeGradient(code);
+
+      document.getElementById('currentYearLabel').textContent = `Year: ${year}`;
+      document.getElementById('kvReligion').textContent = d.dominantReligion;
+      document.getElementById('kvCommodity').textContent = d.mainCommodity;
+      document.getElementById('kvGDP').textContent = formatUSD(d.gdp);
+      document.getElementById('kvGDPpc').textContent = formatUSD(d.gdpPerCapita);
+      document.getElementById('kvUS').textContent = `${d.usAffinityIndex}`;
+
+      const series = buildCountrySeries(code);
+      renderLineCharts(series, year);
+    }
+
+    function buildCountrySeries(code){
+      const years = YEARS.slice();
+      const gdp = years.map(y=>DATA[code][y].gdp);
+      const gdppc = years.map(y=>DATA[code][y].gdpPerCapita);
+      const us = years.map(y=>DATA[code][y].usAffinityIndex);
+      return {years, gdp, gdppc, us};
+    }
+
+    function renderLineCharts(series, highlightYear){
+      const {years, gdp, gdppc, us} = series;
+      renderLineChart('chart-gdp', years, gdp, highlightYear, 'gdp');
+      renderLineChart('chart-gdppc', years, gdppc, highlightYear, 'gdppc');
+      renderLineChart('chart-us', years, us, highlightYear, 'us');
+    }
+
+    function renderLineChart(svgId, years, values, highlightYear, kind){
+      const svg = document.getElementById(svgId);
+      svg.innerHTML = '';
+
+      const W = 320, H = 100, P = 8;
+      const min = Math.min(...values), max = Math.max(...values);
+      const n = values.length;
+
+      function x(i){ return P + (W-2*P)*(i/(n-1)); }
+      function y(v){ return H-P - (H-2*P)*((v - min)/(max - min || 1)); }
+
+      // Gradient for line
+      const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+      const lg = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+      lg.setAttribute('id','gradLine');
+      lg.setAttribute('x1','0'); lg.setAttribute('x2','0'); lg.setAttribute('y1','0'); lg.setAttribute('y2','1');
+      const stop1 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+      stop1.setAttribute('offset','0%'); stop1.setAttribute('stop-color', '#82d4ff');
+      const stop2 = document.createElementNS('http://www.w3.org/2000/svg','stop');
+      stop2.setAttribute('offset','100%'); stop2.setAttribute('stop-color', '#3799cf');
+      lg.appendChild(stop1); lg.appendChild(stop2); defs.appendChild(lg); svg.appendChild(defs);
+
+      // Axes (baseline)
+      const axis = document.createElementNS('http://www.w3.org/2000/svg','line');
+      axis.setAttribute('x1', P); axis.setAttribute('x2', W-P);
+      axis.setAttribute('y1', H-P); axis.setAttribute('y2', H-P);
+      axis.setAttribute('class','axis');
+      svg.appendChild(axis);
+
+      // Polyline
+      const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+      const pts = values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('class','series');
+      svg.appendChild(poly);
+
+      // Highlight vertical line + dot at selected year
+      const idx = years.indexOf(highlightYear);
+      if(idx >= 0){
+        const vx = x(idx);
+        const vline = document.createElementNS('http://www.w3.org/2000/svg','line');
+        vline.setAttribute('x1', vx); vline.setAttribute('x2', vx);
+        vline.setAttribute('y1', P); vline.setAttribute('y2', H-P);
+        vline.setAttribute('class','now-line');
+        svg.appendChild(vline);
+
+        const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        dot.setAttribute('cx', vx);
+        dot.setAttribute('cy', y(values[idx]));
+        dot.setAttribute('r', 3.6);
+        dot.setAttribute('class','dot');
+        svg.appendChild(dot);
+      }
+    }
+
+    function showTooltip(code, year, topic){
+      const t = document.getElementById('tooltip');
+      const d = DATA[code][year];
+      const country = COUNTRY_NAMES[code] || code;
+      let valueLabel = '';
+      if(topic === 'religion'){
+        valueLabel = `Religion: ${d.dominantReligion}`;
+      }else if(topic === 'commodity'){
+        const cat = COMMODITY_CATEGORY[d.mainCommodity] || 'Services/Industry';
+        valueLabel = `Commodity: ${d.mainCommodity} (${cat})`;
+      }else if(topic === 'gdp'){
+        valueLabel = `GDP: ${formatUSD(d.gdp)}`;
+      }else if(topic === 'gdpPerCapita'){
+        valueLabel = `GDP per Capita: ${formatUSD(d.gdpPerCapita)}`;
+      }else if(topic === 'usAffinityIndex'){
+        valueLabel = `US Affinity: ${d.usAffinityIndex}`;
+      }
+      t.innerHTML = `<h4>${country}</h4>
+        <div class="muted">Year: ${year}</div>
+        <div style="margin-top:4px">${valueLabel}</div>`;
+      t.dataset.code = code;
+      t.classList.add('show');
+    }
+    function hideTooltip(){
+      const t = document.getElementById('tooltip');
+      t.classList.remove('show');
+      delete t.dataset.code;
+    }
+
+    // Kick off
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
