@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>South America Data Hub 1960–2025</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Modern typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
       --bg:#0e1116;
@@ -33,9 +37,14 @@
     html,body{height:100%}
     body{
       margin:0;
-      font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font:14px/1.5 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color:var(--text);
-      background:linear-gradient(180deg,#0a0d12, #0d1218 35%, var(--bg));
+      background:
+        radial-gradient(1200px 800px at -10% -10%, #112033 0%, rgba(17,32,51,0) 55%),
+        radial-gradient(1000px 800px at 110% 10%, #1b2a40 0%, rgba(27,42,64,0) 50%),
+        linear-gradient(180deg,#0b0f15, #0c121a 35%, var(--bg));
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     header{
       padding:18px 16px 8px;
@@ -62,14 +71,16 @@
       padding:12px 16px 4px;
     }
     .control{
-      background:var(--panel);
-      border:1px solid #1f2733;
-      border-radius:10px;
+      background:rgba(18,24,33,0.6);
+      backdrop-filter: blur(10px) saturate(140%);
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+      border:1px solid rgba(255,255,255,0.06);
+      border-radius:12px;
       padding:10px 12px;
       display:flex;
       align-items:center;
-      gap:10px;
-      box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset, 0 6px 16px rgba(0,0,0,0.35);
+      gap:12px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.35);
     }
     .control h3{
       margin:0;
@@ -104,25 +115,28 @@
       cursor:pointer;
     }
     .topic-buttons{
-      display:flex;gap:8px;flex-wrap:wrap;
+      display:flex;gap:4px;flex-wrap:wrap;
+      background:rgba(255,255,255,0.04);
+      border:1px solid rgba(255,255,255,0.06);
+      border-radius:12px; padding:4px;
     }
     .topic-btn{
-      border:1px solid #1f2733;
-      background:#111722;
+      border:none;
+      background:transparent;
       color:#cfe5ff;
-      padding:8px 10px;
-      border-radius:8px;
+      padding:8px 12px;
+      border-radius:10px;
       cursor:pointer;
       font-size:12px;
+      font-weight:600;
       letter-spacing:.2px;
       transition:all .15s ease;
     }
-    .topic-btn:hover{border-color:#2a3546;color:#fff}
+    .topic-btn:hover{color:#fff;transform:translateY(-1px)}
     .topic-btn.active{
-      background:linear-gradient(180deg,#13263c,#0f1b2b);
+      background:linear-gradient(180deg,#1a2b40,#132236);
       color:#fff;
-      border-color:#31557a;
-      box-shadow:0 0 0 1px rgba(63,183,255,0.25) inset, 0 6px 20px rgba(24,38,57,0.6);
+      box-shadow:0 8px 18px rgba(17,27,39,0.6), inset 0 0 0 1px rgba(90,150,210,0.25);
     }
     .main{
       display:grid;gap:16px;
@@ -133,12 +147,14 @@
       .main{grid-template-columns:1fr}
     }
     .panel{
-      background:var(--panel);
-      border:1px solid #1f2733;
-      border-radius:12px;
+      background:rgba(18,24,33,0.5);
+      backdrop-filter: blur(12px) saturate(140%);
+      -webkit-backdrop-filter: blur(12px) saturate(140%);
+      border:1px solid rgba(255,255,255,0.06);
+      border-radius:14px;
       padding:12px;
       min-height:200px;
-      box-shadow:0 0 0 1px rgba(255,255,255,0.02) inset, 0 12px 28px rgba(0,0,0,0.35);
+      box-shadow:0 16px 40px rgba(0,0,0,0.4);
     }
     .map-wrap{
       display:flex;flex-direction:column;gap:10px;height:100%;
@@ -157,23 +173,32 @@
     .legend-scale{display:flex;align-items:center;gap:6px;color:#cfe5ff;font-size:12px}
     .legend-scale span{color:#9fb4d3}
     .svg-wrap{
-      flex:1;min-height:420px;background:#0f151f;border:1px solid #1f2733;border-radius:10px;
+      flex:1;min-height:420px;border:1px solid rgba(255,255,255,0.06);border-radius:12px;
       display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+      background:
+        linear-gradient(180deg,#0f151f,#0c141d),
+        repeating-linear-gradient(0deg, transparent, transparent 22px, rgba(255,255,255,0.02) 23px),
+        repeating-linear-gradient(90deg, transparent, transparent 22px, rgba(255,255,255,0.02) 23px);
     }
     svg#sa-map{width:100%;height:100%;max-height:640px}
     .country{
-      fill:#162030;
-      stroke:#1f2b3c;
+      fill:#152236;
+      stroke:#213049;
       stroke-width:1.2;
       cursor:pointer;
-      transition:fill .15s ease, stroke .2s ease, transform .06s ease;
+      transition:fill .18s ease, stroke .2s ease, transform .1s ease, filter .2s ease;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
     }
-    .country:hover{stroke:#3fb7ff;filter:drop-shadow(0 0 4px rgba(63,183,255,0.25))}
+    .country:hover{stroke:#55c2ff;transform:translateY(-1px);filter:drop-shadow(0 4px 10px rgba(63,183,255,0.2))}
     .country.selected{stroke:#f7b500;stroke-width:2}
     .tooltip{
       position:absolute;pointer-events:none;z-index:50;
-      background:#0f151f;border:1px solid #2c3a50;border-radius:8px;padding:8px 10px;
-      color:#e7eef8;box-shadow:0 10px 24px rgba(0,0,0,0.45);font-size:12px;min-width:160px;
+      background:rgba(16,22,30,0.7);
+      backdrop-filter: blur(8px) saturate(140%);
+      -webkit-backdrop-filter: blur(8px) saturate(140%);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:10px;padding:8px 10px;
+      color:#e7eef8;box-shadow:0 16px 28px rgba(0,0,0,0.45);font-size:12px;min-width:170px;
       transform:translate(-50%,-120%);opacity:0;transition:opacity .12s ease;
     }
     .tooltip.show{opacity:1}
@@ -204,18 +229,17 @@
       gap:8px;margin-top:10px;
     }
     .chart{
-      background:#0f151f;border:1px solid #1f2733;border-radius:10px;padding:6px 8px;
+      background:rgba(16,22,30,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:6px 8px;
     }
     .chart h4{
       margin:0 0 6px;
       font-size:12px;color:#cfe5ff;letter-spacing:.2px
     }
     .chart svg{width:100%;height:90px}
-    .axis{
-      stroke:#203046;stroke-width:1
-    }
+    .axis{ stroke:#203046;stroke-width:1 }
+    .grid{ stroke:rgba(255,255,255,0.06);stroke-width:1 }
     .series{
-      fill:none;stroke:url(#gradLine);stroke-width:2
+      fill:none;stroke:url(#gradLine);stroke-width:2.4;stroke-linecap:round
     }
     .series-alt{stroke:#5cc8fa}
     .dot{
@@ -677,7 +701,7 @@
         const pt = svg.createSVGPoint();
         pt.x = e.clientX; pt.y = e.clientY;
         tooltip.style.left = `${e.clientX}px`;
-        tooltip.style.top  = `${e.clientY - 20}px`;
+        tooltip.style.top  = `${e.clientY - 16}px`;
       });
 
       svg.querySelectorAll('.country').forEach(node=>{
@@ -857,6 +881,14 @@
       stop2.setAttribute('offset','100%'); stop2.setAttribute('stop-color', '#3799cf');
       lg.appendChild(stop1); lg.appendChild(stop2); defs.appendChild(lg); svg.appendChild(defs);
 
+      // Area gradient
+      const lg2 = document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+      lg2.setAttribute('id','gradArea');
+      lg2.setAttribute('x1','0'); lg2.setAttribute('x2','0'); lg2.setAttribute('y1','0'); lg2.setAttribute('y2','1');
+      const a1 = document.createElementNS('http://www.w3.org/2000/svg','stop'); a1.setAttribute('offset','0%'); a1.setAttribute('stop-color','#57c8ff'); a1.setAttribute('stop-opacity','0.35');
+      const a2 = document.createElementNS('http://www.w3.org/2000/svg','stop'); a2.setAttribute('offset','100%'); a2.setAttribute('stop-color','#57c8ff'); a2.setAttribute('stop-opacity','0.02');
+      lg2.appendChild(a1); lg2.appendChild(a2); defs.appendChild(lg2);
+
       // Axes (baseline)
       const axis = document.createElementNS('http://www.w3.org/2000/svg','line');
       axis.setAttribute('x1', P); axis.setAttribute('x2', W-P);
@@ -864,11 +896,30 @@
       axis.setAttribute('class','axis');
       svg.appendChild(axis);
 
+      // Horizontal gridlines
+      const gridLevels = [0.25, 0.5, 0.75];
+      gridLevels.forEach(t => {
+        const gy = P + (H - 2*P) * (1 - t);
+        const gl = document.createElementNS('http://www.w3.org/2000/svg','line');
+        gl.setAttribute('x1', P); gl.setAttribute('x2', W-P);
+        gl.setAttribute('y1', gy); gl.setAttribute('y2', gy);
+        gl.setAttribute('class','grid');
+        svg.appendChild(gl);
+      });
+
       // Polyline
       const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
       const pts = values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
       poly.setAttribute('points', pts);
       poly.setAttribute('class','series');
+      // Area under curve (as path)
+      const area = document.createElementNS('http://www.w3.org/2000/svg','path');
+      let d = `M ${x(0)} ${y(values[0])}`;
+      for(let i=1;i<n;i++){ d += ` L ${x(i)} ${y(values[i])}`; }
+      d += ` L ${x(n-1)} ${H-P} L ${x(0)} ${H-P} Z`;
+      area.setAttribute('d', d);
+      area.setAttribute('fill','url(#gradArea)');
+      svg.appendChild(area);
       svg.appendChild(poly);
 
       // Highlight vertical line + dot at selected year
@@ -896,16 +947,16 @@
       const country = COUNTRY_NAMES[code] || code;
       let valueLabel = '';
       if(topic === 'religion'){
-        valueLabel = `Religion: ${d.dominantReligion}`;
+        valueLabel = `Religion: <strong>${d.dominantReligion}</strong>`;
       }else if(topic === 'commodity'){
         const cat = COMMODITY_CATEGORY[d.mainCommodity] || 'Services/Industry';
-        valueLabel = `Commodity: ${d.mainCommodity} (${cat})`;
+        valueLabel = `Commodity: <strong>${d.mainCommodity}</strong> <span class="muted">(${cat})</span>`;
       }else if(topic === 'gdp'){
-        valueLabel = `GDP: ${formatUSD(d.gdp)}`;
+        valueLabel = `GDP: <strong>${formatUSD(d.gdp)}</strong>`;
       }else if(topic === 'gdpPerCapita'){
-        valueLabel = `GDP per Capita: ${formatUSD(d.gdpPerCapita)}`;
+        valueLabel = `GDP per Capita: <strong>${formatUSD(d.gdpPerCapita)}</strong>`;
       }else if(topic === 'usAffinityIndex'){
-        valueLabel = `US Affinity: ${d.usAffinityIndex}`;
+        valueLabel = `US Affinity: <strong>${d.usAffinityIndex}</strong>`;
       }
       t.innerHTML = `<h4>${country}</h4>
         <div class="muted">Year: ${year}</div>
